@@ -37,7 +37,7 @@ Examples: `My Bank!` → `my-bank`; `  My  Bank ` → `my-bank`; `A - B` → `a-
    |---|---|
    | 1st `path` | `/sites/<slug>/ + **` |
    | 2nd `groups` | the users string, verbatim |
-   | 3rd `actions` | `WRITE` |
+   | 3rd `actions` | `write` (lowercase; updated 2026-10-29) |
    | 4th (whatever its header is) | `""` |
 
    **Critical:** `path` is exactly `/sites/<slug>/` followed by a space, a `+`, a space, and `**`. In code: `` `/sites/${slug}/ + **` ``. For `my-bank`: `/sites/my-bank/ + **`.

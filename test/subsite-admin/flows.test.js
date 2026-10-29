@@ -28,7 +28,7 @@ beforeEach(() => {
     permissions: {
       total: 1,
       data: [{
-        path: '/r/sites/other/ + **', groups: 'g', actions: 'WRITE', comments: '',
+        path: '/r/sites/other/ + **', groups: 'g', actions: 'write', comments: '',
       }],
     },
   };
@@ -83,7 +83,7 @@ test('createSite writes multisite + permissions rows, copies, previews', async (
   assert.ok(calls.includes('POST https://admin.da.live/copy/o/r/en'));
   assert.deepEqual(sheets.multisite.data[1], { siteName: 'my-bank', title: '' });
   assert.deepEqual(config.permissions.data[1], {
-    path: '/r/sites/my-bank/ + **', groups: 'a@x.com, b@y.com', actions: 'WRITE', comments: '',
+    path: '/r/sites/my-bank/ + **', groups: 'a@x.com, b@y.com', actions: 'write', comments: '',
   });
   assert.equal(config.permissions.total, 2);
   assert.deepEqual(config.data, otherTab());
@@ -107,7 +107,7 @@ test('createSite adds permissions tab when config has none', async () => {
   config = { ':type': 'multi-sheet', ':names': ['data'], data: otherTab() };
   await createSite(ctx, 'My Bank', 'a', () => {});
   assert.deepEqual(config[':names'], ['data', 'permissions']);
-  assert.deepEqual(config.permissions.data, [{ path: '/r/sites/my-bank/ + **', groups: 'a', actions: 'WRITE' }]);
+  assert.deepEqual(config.permissions.data, [{ path: '/r/sites/my-bank/ + **', groups: 'a', actions: 'write' }]);
   assert.deepEqual(config.data, otherTab());
 });
 
@@ -137,10 +137,10 @@ test('deleteSite unpreviews, removes exact rows, re-previews multisite, deletes 
   sheets.multisite.data.push({ siteName: 'my-bank', title: '' });
   config.permissions.data.push(
     {
-      path: '/r/sites/my-bank/ + **', groups: 'a', actions: 'WRITE', comments: '',
+      path: '/r/sites/my-bank/ + **', groups: 'a', actions: 'write', comments: '',
     },
     {
-      path: '/r/sites/my-bank/**', groups: 'keep', actions: 'WRITE', comments: '',
+      path: '/r/sites/my-bank/**', groups: 'keep', actions: 'write', comments: '',
     },
   );
   await deleteSite(ctx, 'my-bank', () => {});

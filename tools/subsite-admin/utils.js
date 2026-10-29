@@ -51,7 +51,7 @@ export function buildMultisiteRow(slug, headers) {
 }
 
 export function buildPermissionsRow(repo, slug, users, headers) {
-  return buildRow(headers, { path: permissionsPath(repo, slug), groups: users, actions: 'WRITE' });
+  return buildRow(headers, { path: permissionsPath(repo, slug), groups: users, actions: 'write' });
 }
 
 function syncCounts(sheet) {

@@ -54,7 +54,7 @@ test('buildPermissionsRow', () => {
   assert.deepEqual(
     buildPermissionsRow('r', 'my-bank', users, ['path', 'groups', 'actions', 'comments']),
     {
-      path: '/r/sites/my-bank/ + **', groups: users, actions: 'WRITE', comments: '',
+      path: '/r/sites/my-bank/ + **', groups: users, actions: 'write', comments: '',
     },
   );
 });

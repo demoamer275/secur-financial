@@ -30,7 +30,7 @@ Users: comma-separated list, line breaks removed, stored as a single string.
 3. Org config (`https://admin.da.live/config/{org}/`) `permissions` tab: new row
    - `path` = `/<repo>/sites/<slug>/ + **` (exactly: slash, space, `+`, space, `**`)
    - `groups` = users string
-   - `actions` = `WRITE`
+   - `actions` = `write` (lowercase)
    - 4th column blank
 
    The config is re-read just before saving; only the `permissions` tab changes. Its rows before/after are logged to the browser console. `/data/testperm` is no longer used.
