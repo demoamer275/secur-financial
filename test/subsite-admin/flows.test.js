@@ -56,7 +56,7 @@ test('createSite writes rows, copies, previews (not testperm)', async () => {
   });
   assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/sites/my-bank/'));
   assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/sites/my-bank/en/a'));
-  assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/data/multisite'));
+  assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/data/multisite.json'));
   assert.ok(!calls.some((c) => c.includes('preview') && c.includes('testperm')));
   assert.equal(logs.at(-1), 'Done');
 });
@@ -98,7 +98,7 @@ test('deleteSite unpreviews, removes exact rows, re-previews multisite, deletes 
   assert.ok(calls.includes('DELETE https://admin.hlx.page/preview/o/r/main/sites/my-bank/en/a'));
   assert.deepEqual(sheets.multisite.data.map((r) => r.siteName), ['other']);
   assert.deepEqual(sheets.testperm.data.map((r) => r.path), ['/sites/other/ + **', '/sites/my-bank/**']);
-  assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/data/multisite'));
+  assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/data/multisite.json'));
   assert.equal(calls.at(-1), 'DELETE https://admin.da.live/source/o/r/sites/my-bank');
 });
 
@@ -106,4 +106,16 @@ test('deleteSite tolerates missing rows', async () => {
   await deleteSite(ctx, 'my-bank', () => {});
   assert.equal(sheets.multisite.data.length, 1);
   assert.equal(sheets.testperm.data.length, 1);
+});
+
+test('createSite partial failure tells user to delete before retrying', async () => {
+  const orig = globalThis.fetch;
+  globalThis.fetch = async (url, opts = {}) => {
+    if (url.includes('/copy/o/r/en')) return new Response('', { status: 500 });
+    return orig(url, opts);
+  };
+  await assert.rejects(
+    createSite(ctx, 'My Bank', 'a', () => {}),
+    /500.*Partial site "my-bank" may exist; use Delete to clean up before retrying/s,
+  );
 });

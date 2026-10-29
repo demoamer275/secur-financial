@@ -28,19 +28,7 @@ export async function listSites(ctx) {
   return items.filter((item) => !item.ext).map((item) => item.name);
 }
 
-export async function createSite(ctx, siteName, usersInput, log) {
-  const slug = slugify(siteName);
-  if (!slug) throw new Error('Invalid site name');
-  const users = cleanUsers(usersInput).trim();
-  if (!users) throw new Error('Users required');
-
-  log(`Checking whether /sites/${slug} exists`);
-  const existing = await listSites(ctx);
-  const multisite = await readSheet(ctx, MULTISITE);
-  if (existing.includes(slug) || hasRow(multisite, (r) => r.siteName === slug)) {
-    throw new Error(`Site "${slug}" already exists`);
-  }
-
+async function createSteps(ctx, slug, users, multisite, log) {
   log('Copying /index');
   await copy(ctx, '/index.html', `/sites/${slug}/index.html`);
   log('Copying /en');
@@ -63,8 +51,27 @@ export async function createSite(ctx, siteName, usersInput, log) {
     return preview(ctx, page);
   });
   log(`Previewing ${MULTISITE}`);
-  await preview(ctx, MULTISITE);
+  await preview(ctx, `${MULTISITE}.json`);
+}
 
+export async function createSite(ctx, siteName, usersInput, log) {
+  const slug = slugify(siteName);
+  if (!slug) throw new Error('Invalid site name');
+  const users = cleanUsers(usersInput).trim();
+  if (!users) throw new Error('Users required');
+
+  log(`Checking whether /sites/${slug} exists`);
+  const existing = await listSites(ctx);
+  const multisite = await readSheet(ctx, MULTISITE);
+  if (existing.includes(slug) || hasRow(multisite, (r) => r.siteName === slug)) {
+    throw new Error(`Site "${slug}" already exists`);
+  }
+
+  try {
+    await createSteps(ctx, slug, users, multisite, log);
+  } catch (e) {
+    throw new Error(`${e.message}. Partial site "${slug}" may exist; use Delete to clean up before retrying.`);
+  }
   log('Done');
   return slug;
 }
@@ -81,7 +88,7 @@ export async function deleteSite(ctx, slug, log) {
   removeRows(multisite, (r) => r.siteName === slug);
   await writeSheet(ctx, MULTISITE, multisite);
   log(`Previewing ${MULTISITE}`);
-  await preview(ctx, MULTISITE);
+  await preview(ctx, `${MULTISITE}.json`);
 
   log(`Removing row from ${TESTPERM}`);
   const testperm = await readSheet(ctx, TESTPERM);
