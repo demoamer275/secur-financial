@@ -48,7 +48,7 @@ export async function writeSource(ctx, path, html) {
 }
 
 export async function readConfig(ctx) {
-  const resp = await request(ctx, 'GET', `${DA}/config/${ctx.org}/${ctx.repo}/`);
+  const resp = await request(ctx, 'GET', `${DA}/config/${ctx.org}/`);
   return resp.json();
 }
 

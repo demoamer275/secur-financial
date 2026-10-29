@@ -76,10 +76,10 @@ test('readSource/writeSource', async () => {
   assert.equal(await blob.text(), '<p>y</p>');
 });
 
-test('readConfig GETs site config', async () => {
+test('readConfig GETs org config', async () => {
   responder = () => json({ ':type': 'multi-sheet', ':names': ['permissions'], permissions: { data: [] } });
   const cfg = await readConfig(ctx);
-  assert.equal(calls[0].url, 'https://admin.da.live/config/o/r/');
+  assert.equal(calls[0].url, 'https://admin.da.live/config/o/');
   assert.equal(calls[0].opts.method, 'GET');
   assert.equal(calls[0].opts.headers.Authorization, 'Bearer t');
   assert.deepEqual(cfg.permissions, { data: [] });
