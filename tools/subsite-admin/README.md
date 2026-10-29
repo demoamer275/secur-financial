@@ -26,7 +26,7 @@ Users: comma-separated list, line breaks removed, stored as a single string.
 **Create** (blocked if `/sites/<slug>` or a multisite row already exists):
 
 1. Copy `/index` → `/sites/<slug>/index` and `/en/**` → `/sites/<slug>/en/**`.
-2. `/data/multisite`: new row `siteName = <slug>`, other columns blank.
+2. `/data/multisite`: new row `siteName = <slug>`, `scriptURL` = launch script input (optional; trimmed, line breaks removed; blank if omitted), other columns blank.
 3. Org config (`https://admin.da.live/config/{org}/`) `permissions` tab: new row
    - `path` = `/<repo>/sites/<slug>/ + **` (exactly: slash, space, `+`, space, `**`)
    - `groups` = users string

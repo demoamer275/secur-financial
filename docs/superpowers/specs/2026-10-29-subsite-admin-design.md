@@ -126,6 +126,8 @@ Applied to: every `href="..."` attribute, and the value cell of `nav` / `footer`
 
 ## Out of scope
 
+> **Update 2026-10-29:** Optional **Launch script** text input. Trimmed, line breaks removed, written to the multisite row's `scriptURL` column (blank if omitted).
+
 > **Update 2026-10-29:** `/data/testperm` is replaced by the org-level DA config (`GET`/`POST https://admin.da.live/config/{org}/`, form field `config` = JSON string), tab `permissions`. Same columns/values, except `path` = `/<repo>/sites/<slug>/ + **`. Config is re-read immediately before each save, only the `permissions` tab is modified (created if missing), and before/after rows are logged to the console. Existing testperm rows are not touched.
 
 - Rollback of partial operations.

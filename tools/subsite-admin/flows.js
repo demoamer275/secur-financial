@@ -44,7 +44,7 @@ async function updatePermissions(ctx, mutate) {
   await writeConfig(ctx, config);
 }
 
-async function createSteps(ctx, slug, users, multisite, log) {
+async function createSteps(ctx, slug, users, multisite, log, scriptURL) {
   log('Copying /index');
   await copy(ctx, '/index.html', `/sites/${slug}/index.html`);
   log('Copying /en');
@@ -52,7 +52,7 @@ async function createSteps(ctx, slug, users, multisite, log) {
 
   log(`Adding row to ${MULTISITE}`);
   const msHeaders = getHeaders(getSheet(multisite), MULTISITE_DEFAULT_HEADERS);
-  addRow(multisite, buildMultisiteRow(slug, msHeaders));
+  addRow(multisite, buildMultisiteRow(slug, msHeaders, scriptURL));
   await writeSheet(ctx, MULTISITE, multisite);
 
   log(`Adding row to org config ${PERMISSIONS}`);
@@ -79,11 +79,12 @@ async function createSteps(ctx, slug, users, multisite, log) {
   await preview(ctx, `${MULTISITE}.json`);
 }
 
-export async function createSite(ctx, siteName, usersInput, log) {
+export async function createSite(ctx, siteName, usersInput, log, scriptInput = '') {
   const slug = slugify(siteName);
   if (!slug) throw new Error('Invalid site name');
   const users = cleanUsers(usersInput).trim();
   if (!users) throw new Error('Users required');
+  const scriptURL = cleanUsers(scriptInput).trim();
 
   log(`Checking whether /sites/${slug} exists`);
   const existing = await listSites(ctx);
@@ -93,7 +94,7 @@ export async function createSite(ctx, siteName, usersInput, log) {
   }
 
   try {
-    await createSteps(ctx, slug, users, multisite, log);
+    await createSteps(ctx, slug, users, multisite, log, scriptURL);
   } catch (e) {
     throw new Error(`${e.message}. Partial site "${slug}" may exist; use Delete to clean up before retrying.`);
   }

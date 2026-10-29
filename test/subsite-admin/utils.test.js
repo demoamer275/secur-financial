@@ -66,6 +66,18 @@ test('buildMultisiteRow blanks other columns', () => {
   );
 });
 
+test('buildMultisiteRow sets scriptURL', () => {
+  assert.deepEqual(
+    buildMultisiteRow('my-bank', ['siteName', 'scriptURL', 'theme'], 'https://x.com/launch.js'),
+    { siteName: 'my-bank', scriptURL: 'https://x.com/launch.js', theme: '' },
+  );
+  assert.deepEqual(
+    buildMultisiteRow('my-bank', ['siteName'], 'https://x.com/launch.js'),
+    { siteName: 'my-bank', scriptURL: 'https://x.com/launch.js' },
+  );
+  assert.deepEqual(buildMultisiteRow('my-bank', ['siteName', 'scriptURL'], ''), { siteName: 'my-bank', scriptURL: '' });
+});
+
 test('getHeaders', () => {
   assert.deepEqual(getHeaders({ data: [] }, MULTISITE_DEFAULT_HEADERS), ['siteName']);
   assert.deepEqual(getHeaders({ data: [] }, PERMISSIONS_DEFAULT_HEADERS), ['path', 'groups', 'actions']);

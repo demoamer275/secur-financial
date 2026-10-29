@@ -46,8 +46,10 @@ function buildRow(headers, values) {
   return { ...row, ...values };
 }
 
-export function buildMultisiteRow(slug, headers) {
-  return buildRow(headers, { siteName: slug });
+export function buildMultisiteRow(slug, headers, scriptURL = '') {
+  const values = { siteName: slug };
+  if (scriptURL || headers.includes('scriptURL')) values.scriptURL = scriptURL;
+  return buildRow(headers, values);
 }
 
 export function buildPermissionsRow(repo, slug, users, headers) {

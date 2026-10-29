@@ -18,6 +18,7 @@ class SubsiteAdmin extends LitElement {
     ctx: { attribute: false },
     _siteName: { state: true },
     _users: { state: true },
+    _script: { state: true },
     _sites: { state: true },
     _log: { state: true },
     _error: { state: true },
@@ -28,6 +29,7 @@ class SubsiteAdmin extends LitElement {
     super();
     this._siteName = '';
     this._users = '';
+    this._script = '';
     this._sites = [];
     this._log = [];
     this._busy = false;
@@ -77,9 +79,10 @@ class SubsiteAdmin extends LitElement {
   onCreate(e) {
     e.preventDefault();
     this.run(async (log) => {
-      await createSite(this.ctx, this._siteName, this._users, log);
+      await createSite(this.ctx, this._siteName, this._users, log, this._script);
       this._siteName = '';
       this._users = '';
+      this._script = '';
     });
   }
 
@@ -106,6 +109,12 @@ class SubsiteAdmin extends LitElement {
               @input=${(e) => { this._users = e.target.value.replace(/[\r\n]/g, ''); }} required>
           </label>
           <p class="hint">Enter a comma-separated list of users.</p>
+          <label>Launch script (optional)
+            <input type="text" .value=${this._script}
+              placeholder="https://assets.adobedtm.com/.../launch-xxxx.min.js"
+              @input=${(e) => { this._script = e.target.value.replace(/[\r\n]/g, ''); }}>
+          </label>
+          <p class="hint">Saved to the scriptURL column of the multisite sheet.</p>
           <button type="submit" ?disabled=${this._busy || !slug}>Create</button>
         </form>
       </section>`;

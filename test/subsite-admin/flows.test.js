@@ -111,6 +111,18 @@ test('createSite adds permissions tab when config has none', async () => {
   assert.deepEqual(config.data, otherTab());
 });
 
+test('createSite writes cleaned launch script to multisite scriptURL', async () => {
+  sheets.multisite.data[0].scriptURL = '';
+  await createSite(ctx, 'My Bank', 'a', () => {}, '  https://x.com/launch.js\r\n ');
+  assert.deepEqual(sheets.multisite.data[1], { siteName: 'my-bank', title: '', scriptURL: 'https://x.com/launch.js' });
+});
+
+test('createSite leaves scriptURL blank when launch script omitted', async () => {
+  sheets.multisite.data[0].scriptURL = 'https://other.js';
+  await createSite(ctx, 'My Bank', 'a', () => {});
+  assert.deepEqual(sheets.multisite.data[1], { siteName: 'my-bank', title: '', scriptURL: '' });
+});
+
 test('createSite rejects empty slug before any network call', async () => {
   await assert.rejects(createSite(ctx, '!!!', 'a', () => {}), /Invalid site name/);
   assert.equal(calls.length, 0);
