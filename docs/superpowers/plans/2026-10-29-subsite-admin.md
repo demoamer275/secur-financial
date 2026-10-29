@@ -13,9 +13,10 @@
 ## Global Constraints
 
 - testperm `path` value is exactly `` `/sites/${slug}/ + **` `` — slash, space, `+`, space, `**`. Never `/sites/<slug>/**`.
-- testperm `groups` = users input string verbatim (no split/trim/parse). `actions` = `WRITE`. 4th column = `""`.
+- testperm `groups` = users input with line breaks (`\r`, `\n`) removed; otherwise verbatim (no split/parse). `actions` = `WRITE`. 4th column = `""`.
+- Users field: single-line `<input>` labelled `Users (comma-separated)`, placeholder `user1@example.com, user2@example.com`.
 - multisite new row: `siteName` = slug; every other column `""`.
-- Slug: lowercase → each space to `-` → strip chars not in `[a-z0-9-]`. Empty slug = error.
+- Slug: lowercase → each space to `-` → strip chars not in `[a-z0-9-]` → collapse `-+` to `-` → trim leading/trailing `-`. Empty slug = error.
 - Create blocks if `/sites/<slug>` exists or multisite has `siteName === slug`.
 - Preview copied pages + `/data/multisite`. Never preview `/data/testperm`.
 - Delete: un-preview pages, remove rows, re-preview multisite, then `DELETE` source folder.
@@ -24,9 +25,9 @@
 
 ## Review Focus
 
-- Users string containing commas/newlines → stored verbatim in `groups` (test in Task 2).
+- Users pasted with newlines → newlines removed, commas kept (Task 2 `cleanUsers`).
 - Site name with only symbols (`"!!!"`) → empty slug, create rejected before any network call (Task 2 + Task 5).
-- Multiple consecutive / leading spaces (`"  My  Bank "`) → `--my--bank-` per literal rule; no collapsing (Task 2 pins it so behavior is deliberate).
+- Consecutive / leading / trailing spaces or dashes (`"  My  Bank "`, `"A - B"`) → `my-bank`, `a-b` (Task 2).
 - Sheet with no rows yet → headers must come from `columns` or fall back to spec defaults (`siteName`; `path, groups, actions` + none) rather than producing `{}` (Task 2).
 - Delete of a slug whose rows are missing from a sheet → still proceeds, removes nothing, no error (Task 2 `removeRows` test, Task 5 flow).
 
@@ -76,6 +77,7 @@ package.json                            add "test" script (Task 2)
 - Produces:
   - `slugify(name: string) => string`
   - `testpermPath(slug: string) => string`
+  - `cleanUsers(users: string) => string` — removes every `\r` and `\n`.
   - `getSheet(json: object) => { data: object[], columns?: string[] }` — returns the sheet object (single: `json`; multi-sheet: `json[json[':names'][0]]`). Mutating it mutates `json`.
   - `getHeaders(sheet, fallback: string[]) => string[]` — `sheet.columns` if present, else keys of `sheet.data[0]`, else `fallback`.
   - `buildMultisiteRow(slug, headers) => object`
@@ -91,15 +93,20 @@ package.json                            add "test" script (Task 2)
 test('slugify', () => {
   assert.equal(slugify('My Bank!'), 'my-bank');
   assert.equal(slugify('ACME Corp 2'), 'acme-corp-2');
-  assert.equal(slugify('  My  Bank '), '--my--bank-');
+  assert.equal(slugify('  My  Bank '), 'my-bank');
+  assert.equal(slugify('A - B'), 'a-b');
+  assert.equal(slugify('-x-'), 'x');
   assert.equal(slugify('!!!'), '');
   assert.equal(slugify('Café_Site'), 'cafsite');
 });
 test('testpermPath exact format', () => {
   assert.equal(testpermPath('my-bank'), '/sites/my-bank/ + **');
 });
+test('cleanUsers strips line breaks', () => {
+  assert.equal(cleanUsers('a@x.com,\r\nb@y.com,\nc@z.com'), 'a@x.com,b@y.com,c@z.com');
+});
 test('buildTestpermRow', () => {
-  const users = 'a@x.com, b@y.com\nc@z.com';
+  const users = 'a@x.com, b@y.com';
   assert.deepEqual(
     buildTestpermRow('my-bank', users, ['path', 'groups', 'actions', 'notes']),
     { path: '/sites/my-bank/ + **', groups: users, actions: 'WRITE', notes: '' },
@@ -120,7 +127,7 @@ test('removeRows testperm matches exact path only', () => {
 ```
 
 - [ ] **Step 2:** `npm test` → FAIL (module not found).
-- [ ] **Step 3:** Implement exports above. `slugify`: `name.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '')`. Rows are built by mapping every header to `''` then setting the known keys; known keys missing from headers are still included.
+- [ ] **Step 3:** Implement exports above. `slugify`: `name.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '')`. Rows are built by mapping every header to `''` then setting the known keys; known keys missing from headers are still included.
 - [ ] **Step 4:** `npm test` → all PASS; `npm run lint:js` clean.
 - [ ] **Step 5:** Commit `feat(subsite-admin): pure helpers with tests`.
 
@@ -181,7 +188,7 @@ test('removeRows testperm matches exact path only', () => {
 - Produces: custom element `<subsite-admin>` with properties `ctx` (`{ org, repo, token }`); exported `createSite(ctx, siteName, users, log)` and `deleteSite(ctx, slug, log)` where `log(msg: string)` reports progress.
 
 - [ ] **Step 1: `createSite`** — order exactly:
-  1. `slug = slugify(siteName)`; empty → throw `Invalid site name`. `users` empty after trim → throw `Users required`.
+  1. `slug = slugify(siteName)`; empty → throw `Invalid site name`. `users = cleanUsers(users)`; empty after trim → throw `Users required`.
   2. `listFolder(ctx,'/sites')` contains `name === slug` → throw `Site "<slug>" already exists`. `readSheet('/data/multisite')` `hasRow(siteName===slug)` → same error.
   3. `copy('/index.html', '/sites/<slug>/index.html')`; `copy('/en', '/sites/<slug>/en')`.
   4. multisite: `addRow(json, buildMultisiteRow(slug, getHeaders(getSheet(json), MULTISITE_DEFAULT_HEADERS)))`, `writeSheet`.
@@ -190,7 +197,7 @@ test('removeRows testperm matches exact path only', () => {
   `log` a line before each step and `Done` at end.
 - [ ] **Step 2: `deleteSite`** — `crawlPages` → `unpreview` each; multisite `removeRows(siteName===slug)` + write + `preview('/data/multisite')`; testperm `removeRows(path === testpermPath(slug))` + write; `deleteSource('/sites/<slug>')`.
 - [ ] **Step 3: Component** — tutorial pattern (`adoptedStyleSheets` from a `CSSStyleSheet` built from `fetch(new URL('./subsite-admin.css', import.meta.url))`). Sections:
-  - **Create Site**: inputs *Site name*, *Users* (textarea); live preview line `Folder: /sites/<slug>`; *Create* button.
+  - **Create Site**: inputs *Site name*, *Users (comma-separated)* (single-line `<input>`, placeholder `user1@example.com, user2@example.com`); live preview line `Folder: /sites/<slug>`; *Create* button.
   - **Delete Site**: list from `listFolder('/sites')` (folders only), each with *Delete* → `confirm(\`Delete /sites/${slug} and its sheet rows?\`)`.
   - Status log `<ul>`; buttons disabled while `_busy`; errors shown in red; list refreshes after create/delete.
   - `init()` as in tutorial: `const { context, token } = await DA_SDK;` → `cmp.ctx = { org: context.org, repo: context.repo, token }`.

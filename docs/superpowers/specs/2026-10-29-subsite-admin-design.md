@@ -10,15 +10,17 @@ A DA (da.live) app that lets an admin create and delete "subsites" under `/sites
 ## Inputs
 
 - **Site name** (text). Converted to a slug (see below).
-- **Users** (text). Treated as a single opaque string (not parsed into an array). Written verbatim into the testperm `groups` column.
+- **Users** (single-line text input). Label and placeholder tell the user it expects a comma-separated list (e.g. `user1@example.com, user2@example.com`). Line breaks (`\r`, `\n`) are stripped (removed); otherwise treated as a single opaque string (not parsed into an array) and written into the testperm `groups` column.
 
 ## Slug rule
 
 1. Lowercase.
 2. Replace each space with `-`.
 3. Remove every character not in `[a-z0-9-]`.
+4. Collapse runs of `-` into a single `-`.
+5. Remove leading and trailing `-`.
 
-Example: `My Bank!` → `my-bank`. Empty result → validation error, no action taken. "Site name" below always means the slug.
+Examples: `My Bank!` → `my-bank`; `  My  Bank ` → `my-bank`; `A - B` → `a-b`. Empty result → validation error, no action taken. "Site name" below always means the slug.
 
 ## Create flow
 
