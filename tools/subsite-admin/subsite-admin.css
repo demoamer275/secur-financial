@@ -1,0 +1,85 @@
+:host {
+  display: block;
+  max-width: 800px;
+  margin: 32px auto;
+  font-family: system-ui, sans-serif;
+}
+
+section {
+  border: 2px solid #efefef;
+  border-radius: 16px;
+  padding: 18px 24px;
+  margin-bottom: 24px;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+label {
+  display: block;
+  font-weight: 700;
+  margin-top: 12px;
+}
+
+input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 6px;
+  padding: 8px;
+  font: inherit;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.hint {
+  margin: 4px 0 0;
+  color: #666;
+  font-size: 0.9em;
+}
+
+button {
+  margin-top: 16px;
+  padding: 8px 18px;
+  font: inherit;
+  border: none;
+  border-radius: 16px;
+  background: #3b63fb;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.danger {
+  margin-top: 0;
+  background: #d7373f;
+}
+
+.sites {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sites li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #efefef;
+}
+
+.status ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.error {
+  color: #d7373f;
+  font-weight: 700;
+}
