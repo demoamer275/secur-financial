@@ -3,6 +3,7 @@ import DA_SDK from 'https://da.live/nx/utils/sdk.js';
 import { LitElement, html, nothing } from 'da-lit';
 import { slugify } from './utils.js';
 import { createSite, deleteSite, listSites } from './flows.js';
+import { readConfig } from './api.js';
 
 async function loadStyles() {
   const resp = await fetch(new URL('./subsite-admin.css', import.meta.url));
@@ -36,6 +37,18 @@ class SubsiteAdmin extends LitElement {
     super.connectedCallback();
     this.shadowRoot.adoptedStyleSheets = [styles];
     this.refresh();
+    this.logPermissions();
+  }
+
+  async logPermissions() {
+    try {
+      const config = await readConfig(this.ctx);
+      // eslint-disable-next-line no-console
+      console.log('[SubSite Admin] permissions config:', config.permissions ?? '(no permissions sheet)', config);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[SubSite Admin] failed to read config:', e.message);
+    }
   }
 
   async refresh() {

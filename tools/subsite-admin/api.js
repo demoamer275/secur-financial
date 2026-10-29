@@ -47,6 +47,11 @@ export async function writeSource(ctx, path, html) {
   await request(ctx, 'PUT', `${DA}/source/${ctx.org}/${ctx.repo}${path}`, { body });
 }
 
+export async function readConfig(ctx) {
+  const resp = await request(ctx, 'GET', `${DA}/config/${ctx.org}/${ctx.repo}/`);
+  return resp.json();
+}
+
 export async function deleteSource(ctx, path) {
   await request(ctx, 'DELETE', `${DA}/source/${ctx.org}/${ctx.repo}${path}`);
 }

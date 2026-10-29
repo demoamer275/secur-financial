@@ -3,7 +3,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   listFolder, copy, readSheet, writeSheet, deleteSource, crawlPages, preview, unpreview,
-  readSource, writeSource,
+  readSource, writeSource, readConfig,
 } from '../../tools/subsite-admin/api.js';
 
 const ctx = { org: 'o', repo: 'r', token: 't' };
@@ -74,6 +74,15 @@ test('readSource/writeSource', async () => {
   const blob = calls[1].opts.body.get('data');
   assert.equal(blob.type, 'text/html');
   assert.equal(await blob.text(), '<p>y</p>');
+});
+
+test('readConfig GETs site config', async () => {
+  responder = () => json({ ':type': 'multi-sheet', ':names': ['permissions'], permissions: { data: [] } });
+  const cfg = await readConfig(ctx);
+  assert.equal(calls[0].url, 'https://admin.da.live/config/o/r/');
+  assert.equal(calls[0].opts.method, 'GET');
+  assert.equal(calls[0].opts.headers.Authorization, 'Bearer t');
+  assert.deepEqual(cfg.permissions, { data: [] });
 });
 
 test('deleteSource DELETEs', async () => {
