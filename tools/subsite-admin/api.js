@@ -52,6 +52,12 @@ export async function readConfig(ctx) {
   return resp.json();
 }
 
+export async function writeConfig(ctx, json) {
+  const body = new FormData();
+  body.append('config', JSON.stringify(json));
+  await request(ctx, 'POST', `${DA}/config/${ctx.org}/`, { body });
+}
+
 export async function deleteSource(ctx, path) {
   await request(ctx, 'DELETE', `${DA}/source/${ctx.org}/${ctx.repo}${path}`);
 }

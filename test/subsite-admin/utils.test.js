@@ -2,17 +2,18 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   slugify,
-  testpermPath,
+  permissionsPath,
+  ensureSheet,
   cleanUsers,
   getSheet,
   getHeaders,
   buildMultisiteRow,
-  buildTestpermRow,
+  buildPermissionsRow,
   addRow,
   removeRows,
   hasRow,
   MULTISITE_DEFAULT_HEADERS,
-  TESTPERM_DEFAULT_HEADERS,
+  PERMISSIONS_DEFAULT_HEADERS,
 } from '../../tools/subsite-admin/utils.js';
 
 test('slugify', () => {
@@ -25,8 +26,22 @@ test('slugify', () => {
   assert.equal(slugify('Café_Site'), 'cafsite');
 });
 
-test('testpermPath exact format', () => {
-  assert.equal(testpermPath('my-bank'), '/sites/my-bank/ + **');
+test('permissionsPath exact format', () => {
+  assert.equal(permissionsPath('secur-financial', 'my-bank'), '/secur-financial/sites/my-bank/ + **');
+});
+
+test('ensureSheet returns existing tab or adds one', () => {
+  const cfg = { ':type': 'multi-sheet', ':names': ['data'], data: { data: [] } };
+  const sheet = ensureSheet(cfg, 'permissions');
+  assert.deepEqual(cfg[':names'], ['data', 'permissions']);
+  assert.deepEqual(sheet, { data: [] });
+  assert.equal(cfg.permissions, sheet);
+  assert.equal(ensureSheet(cfg, 'permissions'), sheet);
+  assert.deepEqual(cfg[':names'], ['data', 'permissions']);
+  const noNames = {};
+  ensureSheet(noNames, 'permissions');
+  assert.deepEqual(noNames[':names'], ['permissions']);
+  assert.equal(noNames[':type'], 'multi-sheet');
 });
 
 test('cleanUsers strips line breaks', () => {
@@ -34,12 +49,12 @@ test('cleanUsers strips line breaks', () => {
   assert.equal(cleanUsers('a@x.com, b@y.com'), 'a@x.com, b@y.com');
 });
 
-test('buildTestpermRow', () => {
+test('buildPermissionsRow', () => {
   const users = 'a@x.com, b@y.com';
   assert.deepEqual(
-    buildTestpermRow('my-bank', users, ['path', 'groups', 'actions', 'notes']),
+    buildPermissionsRow('r', 'my-bank', users, ['path', 'groups', 'actions', 'comments']),
     {
-      path: '/sites/my-bank/ + **', groups: users, actions: 'WRITE', notes: '',
+      path: '/r/sites/my-bank/ + **', groups: users, actions: 'WRITE', comments: '',
     },
   );
 });
@@ -53,7 +68,7 @@ test('buildMultisiteRow blanks other columns', () => {
 
 test('getHeaders', () => {
   assert.deepEqual(getHeaders({ data: [] }, MULTISITE_DEFAULT_HEADERS), ['siteName']);
-  assert.deepEqual(getHeaders({ data: [] }, TESTPERM_DEFAULT_HEADERS), ['path', 'groups', 'actions']);
+  assert.deepEqual(getHeaders({ data: [] }, PERMISSIONS_DEFAULT_HEADERS), ['path', 'groups', 'actions']);
   assert.deepEqual(getHeaders({ columns: ['a', 'b'], data: [] }, ['x']), ['a', 'b']);
   assert.deepEqual(getHeaders({ data: [{ p: '1', q: '' }] }, ['x']), ['p', 'q']);
 });
@@ -96,14 +111,14 @@ test('getSheet handles missing data array', () => {
   assert.deepEqual(json.data, [{ siteName: 'x' }]);
 });
 
-test('removeRows testperm matches exact path only', () => {
+test('removeRows permissions matches exact path only', () => {
   const json = {
     data: [
-      { path: '/sites/my-bank/ + **' },
-      { path: '/sites/my-bank/**' },
+      { path: '/r/sites/my-bank/ + **' },
+      { path: '/r/sites/my-bank/**' },
     ],
   };
-  const { removed } = removeRows(json, (r) => r.path === testpermPath('my-bank'));
+  const { removed } = removeRows(json, (r) => r.path === permissionsPath('r', 'my-bank'));
   assert.equal(removed, 1);
-  assert.deepEqual(json.data, [{ path: '/sites/my-bank/**' }]);
+  assert.deepEqual(json.data, [{ path: '/r/sites/my-bank/**' }]);
 });

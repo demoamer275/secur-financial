@@ -1,26 +1,27 @@
 import {
   slugify,
   cleanUsers,
-  testpermPath,
+  permissionsPath,
+  ensureSheet,
   getSheet,
   getHeaders,
   buildMultisiteRow,
-  buildTestpermRow,
+  buildPermissionsRow,
   addRow,
   removeRows,
   hasRow,
   MULTISITE_DEFAULT_HEADERS,
-  TESTPERM_DEFAULT_HEADERS,
+  PERMISSIONS_DEFAULT_HEADERS,
   siteHosts,
   rewriteLinks,
 } from './utils.js';
 import {
   listFolder, copy, readSheet, writeSheet, deleteSource, crawlPages, preview, unpreview,
-  readSource, writeSource,
+  readSource, writeSource, readConfig, writeConfig,
 } from './api.js';
 
 const MULTISITE = '/data/multisite';
-const TESTPERM = '/data/testperm';
+const PERMISSIONS = 'permissions';
 
 function sequence(items, fn) {
   return items.reduce((prev, item) => prev.then(() => fn(item)), Promise.resolve());
@@ -29,6 +30,18 @@ function sequence(items, fn) {
 export async function listSites(ctx) {
   const items = await listFolder(ctx, '/sites');
   return items.filter((item) => !item.ext).map((item) => item.name);
+}
+
+// Re-reads the org config immediately before saving and changes only the permissions tab.
+async function updatePermissions(ctx, mutate) {
+  const config = await readConfig(ctx);
+  const sheet = ensureSheet(config, PERMISSIONS);
+  /* eslint-disable no-console */
+  console.log('[SubSite Admin] permissions before:', structuredClone(sheet.data));
+  mutate(sheet);
+  console.log('[SubSite Admin] permissions after:', structuredClone(sheet.data));
+  /* eslint-enable no-console */
+  await writeConfig(ctx, config);
 }
 
 async function createSteps(ctx, slug, users, multisite, log) {
@@ -42,11 +55,11 @@ async function createSteps(ctx, slug, users, multisite, log) {
   addRow(multisite, buildMultisiteRow(slug, msHeaders));
   await writeSheet(ctx, MULTISITE, multisite);
 
-  log(`Adding row to ${TESTPERM}`);
-  const testperm = await readSheet(ctx, TESTPERM);
-  const tpHeaders = getHeaders(getSheet(testperm), TESTPERM_DEFAULT_HEADERS);
-  addRow(testperm, buildTestpermRow(slug, users, tpHeaders));
-  await writeSheet(ctx, TESTPERM, testperm);
+  log(`Adding row to org config ${PERMISSIONS}`);
+  await updatePermissions(ctx, (sheet) => {
+    const headers = getHeaders(sheet, PERMISSIONS_DEFAULT_HEADERS);
+    addRow(sheet, buildPermissionsRow(ctx.repo, slug, users, headers));
+  });
 
   const pages = await crawlPages(ctx, `/sites/${slug}`);
   const hosts = siteHosts(ctx);
@@ -102,11 +115,11 @@ export async function deleteSite(ctx, slug, log) {
   log(`Previewing ${MULTISITE}`);
   await preview(ctx, `${MULTISITE}.json`);
 
-  log(`Removing row from ${TESTPERM}`);
-  const testperm = await readSheet(ctx, TESTPERM);
-  const path = testpermPath(slug);
-  removeRows(testperm, (r) => r.path === path);
-  await writeSheet(ctx, TESTPERM, testperm);
+  log(`Removing row from org config ${PERMISSIONS}`);
+  const path = permissionsPath(ctx.repo, slug);
+  await updatePermissions(ctx, (sheet) => {
+    removeRows(sheet, (r) => r.path === path);
+  });
 
   log(`Deleting /sites/${slug}`);
   await deleteSource(ctx, `/sites/${slug}`);

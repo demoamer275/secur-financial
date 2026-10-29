@@ -27,18 +27,20 @@ Users: comma-separated list, line breaks removed, stored as a single string.
 
 1. Copy `/index` → `/sites/<slug>/index` and `/en/**` → `/sites/<slug>/en/**`.
 2. `/data/multisite`: new row `siteName = <slug>`, other columns blank.
-3. `/data/testperm`: new row
-   - `path` = `/sites/<slug>/ + **` (exactly: slash, space, `+`, space, `**`)
+3. Org config (`https://admin.da.live/config/{org}/`) `permissions` tab: new row
+   - `path` = `/<repo>/sites/<slug>/ + **` (exactly: slash, space, `+`, space, `**`)
    - `groups` = users string
    - `actions` = `WRITE`
    - 4th column blank
+
+   The config is re-read just before saving; only the `permissions` tab changes. Its rows before/after are logged to the browser console. `/data/testperm` is no longer used.
 4. Rewrite links in every copied page (data sheets are ignored), saving only pages that change:
    - `href`s and `nav`/`footer` metadata values pointing to `/en/...` → `/sites/<slug>/en/...`; `/` or `/index` → `/sites/<slug>/`.
    - Same applies to absolute `https://main--{repo}--{org}.aem.page|aem.live/...` links (made site-relative).
    - Other links (external, `/data/...`, `/drafts/...`, already `/sites/...`, media) and body text are untouched.
-5. Preview copied pages and `/data/multisite` (testperm is not previewed).
+5. Preview copied pages and `/data/multisite` (the org config is not previewed).
 
-**Delete**: un-preview pages, remove the multisite row and the testperm row whose `path` is exactly `/sites/<slug>/ + **`, re-preview multisite, delete `/sites/<slug>`.
+**Delete**: un-preview pages, remove the multisite row, re-preview multisite, remove the org config `permissions` row whose `path` is exactly `/<repo>/sites/<slug>/ + **`, delete `/sites/<slug>`.
 
 ## Tests
 

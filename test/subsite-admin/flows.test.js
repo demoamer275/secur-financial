@@ -4,12 +4,15 @@ import assert from 'node:assert/strict';
 import { createSite, deleteSite } from '../../tools/subsite-admin/flows.js';
 
 const ctx = { org: 'o', repo: 'r', token: 't' };
+const CONFIG_URL = 'https://admin.da.live/config/o/';
 let calls;
 let sheets;
 let sitesList;
 let pages;
+let config;
 
 const json = (b) => new Response(JSON.stringify(b), { status: 200 });
+const otherTab = () => ({ total: 1, data: [{ key: 'k', value: 'v' }] });
 
 beforeEach(() => {
   calls = [];
@@ -17,17 +20,26 @@ beforeEach(() => {
   sitesList = [{ name: 'other', path: '/o/r/sites/other' }];
   sheets = {
     multisite: { ':type': 'sheet', total: 1, data: [{ siteName: 'other', title: 'T' }] },
-    testperm: {
-      ':type': 'sheet',
+  };
+  config = {
+    ':type': 'multi-sheet',
+    ':names': ['data', 'permissions'],
+    data: otherTab(),
+    permissions: {
       total: 1,
       data: [{
-        path: '/sites/other/ + **', groups: 'g', actions: 'WRITE', notes: '',
+        path: '/r/sites/other/ + **', groups: 'g', actions: 'WRITE', comments: '',
       }],
     },
   };
   globalThis.fetch = async (url, opts = {}) => {
     const method = opts.method || 'GET';
     calls.push(`${method} ${url}`);
+    if (url === CONFIG_URL && method === 'GET') return json(config);
+    if (url === CONFIG_URL && method === 'POST') {
+      config = JSON.parse(opts.body.get('config'));
+      return json({});
+    }
     const sheet = url.match(/source\/o\/r\/data\/(\w+)\.json$/);
     if (sheet && method === 'GET') return json(sheets[sheet[1]]);
     if (sheet && method === 'PUT') {
@@ -63,21 +75,40 @@ test('createSite rewrites copied page links before preview, skips unchanged', as
   assert.ok(!calls.includes('PUT https://admin.da.live/source/o/r/sites/my-bank/en/a.html'));
 });
 
-test('createSite writes rows, copies, previews (not testperm)', async () => {
+test('createSite writes multisite + permissions rows, copies, previews', async () => {
   const logs = [];
   const slug = await createSite(ctx, '  My  Bank! ', 'a@x.com,\r\n b@y.com', (m) => logs.push(m));
   assert.equal(slug, 'my-bank');
   assert.ok(calls.includes('POST https://admin.da.live/copy/o/r/index.html'));
   assert.ok(calls.includes('POST https://admin.da.live/copy/o/r/en'));
   assert.deepEqual(sheets.multisite.data[1], { siteName: 'my-bank', title: '' });
-  assert.deepEqual(sheets.testperm.data[1], {
-    path: '/sites/my-bank/ + **', groups: 'a@x.com, b@y.com', actions: 'WRITE', notes: '',
+  assert.deepEqual(config.permissions.data[1], {
+    path: '/r/sites/my-bank/ + **', groups: 'a@x.com, b@y.com', actions: 'WRITE', comments: '',
   });
+  assert.equal(config.permissions.total, 2);
+  assert.deepEqual(config.data, otherTab());
+  assert.deepEqual(config[':names'], ['data', 'permissions']);
+  assert.ok(!calls.some((c) => c.includes('testperm')));
   assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/sites/my-bank/'));
   assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/sites/my-bank/en/a'));
   assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/data/multisite.json'));
-  assert.ok(!calls.some((c) => c.includes('preview') && c.includes('testperm')));
   assert.equal(logs.at(-1), 'Done');
+});
+
+test('createSite reads org config after copying (just before saving)', async () => {
+  await createSite(ctx, 'My Bank', 'a', () => {});
+  const read = calls.lastIndexOf(`GET ${CONFIG_URL}`);
+  const save = calls.indexOf(`POST ${CONFIG_URL}`);
+  assert.ok(read > calls.indexOf('POST https://admin.da.live/copy/o/r/en'));
+  assert.equal(save, read + 1);
+});
+
+test('createSite adds permissions tab when config has none', async () => {
+  config = { ':type': 'multi-sheet', ':names': ['data'], data: otherTab() };
+  await createSite(ctx, 'My Bank', 'a', () => {});
+  assert.deepEqual(config[':names'], ['data', 'permissions']);
+  assert.deepEqual(config.permissions.data, [{ path: '/r/sites/my-bank/ + **', groups: 'a', actions: 'WRITE' }]);
+  assert.deepEqual(config.data, otherTab());
 });
 
 test('createSite rejects empty slug before any network call', async () => {
@@ -104,27 +135,32 @@ test('createSite blocks when multisite row exists', async () => {
 
 test('deleteSite unpreviews, removes exact rows, re-previews multisite, deletes folder last', async () => {
   sheets.multisite.data.push({ siteName: 'my-bank', title: '' });
-  sheets.testperm.data.push(
+  config.permissions.data.push(
     {
-      path: '/sites/my-bank/ + **', groups: 'a', actions: 'WRITE', notes: '',
+      path: '/r/sites/my-bank/ + **', groups: 'a', actions: 'WRITE', comments: '',
     },
     {
-      path: '/sites/my-bank/**', groups: 'keep', actions: 'WRITE', notes: '',
+      path: '/r/sites/my-bank/**', groups: 'keep', actions: 'WRITE', comments: '',
     },
   );
   await deleteSite(ctx, 'my-bank', () => {});
   assert.ok(calls.includes('DELETE https://admin.hlx.page/preview/o/r/main/sites/my-bank/'));
   assert.ok(calls.includes('DELETE https://admin.hlx.page/preview/o/r/main/sites/my-bank/en/a'));
   assert.deepEqual(sheets.multisite.data.map((r) => r.siteName), ['other']);
-  assert.deepEqual(sheets.testperm.data.map((r) => r.path), ['/sites/other/ + **', '/sites/my-bank/**']);
+  assert.deepEqual(config.permissions.data.map((r) => r.path), ['/r/sites/other/ + **', '/r/sites/my-bank/**']);
+  assert.deepEqual(config.data, otherTab());
+  assert.ok(!calls.some((c) => c.includes('testperm')));
   assert.ok(calls.includes('POST https://admin.hlx.page/preview/o/r/main/data/multisite.json'));
   assert.equal(calls.at(-1), 'DELETE https://admin.da.live/source/o/r/sites/my-bank');
 });
 
-test('deleteSite tolerates missing rows', async () => {
+test('deleteSite tolerates missing rows and missing permissions tab', async () => {
   await deleteSite(ctx, 'my-bank', () => {});
   assert.equal(sheets.multisite.data.length, 1);
-  assert.equal(sheets.testperm.data.length, 1);
+  assert.equal(config.permissions.data.length, 1);
+  config = { ':type': 'multi-sheet', ':names': ['data'], data: otherTab() };
+  await deleteSite(ctx, 'my-bank', () => {});
+  assert.deepEqual(config.data, otherTab());
 });
 
 test('createSite partial failure tells user to delete before retrying', async () => {

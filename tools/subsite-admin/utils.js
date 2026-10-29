@@ -1,5 +1,5 @@
 export const MULTISITE_DEFAULT_HEADERS = ['siteName'];
-export const TESTPERM_DEFAULT_HEADERS = ['path', 'groups', 'actions'];
+export const PERMISSIONS_DEFAULT_HEADERS = ['path', 'groups', 'actions'];
 
 export function slugify(name) {
   return String(name)
@@ -10,8 +10,8 @@ export function slugify(name) {
     .replace(/^-|-$/g, '');
 }
 
-export function testpermPath(slug) {
-  return `/sites/${slug}/ + **`;
+export function permissionsPath(repo, slug) {
+  return `/${repo}/sites/${slug}/ + **`;
 }
 
 export function cleanUsers(users) {
@@ -22,6 +22,17 @@ export function getSheet(json) {
   const sheet = json[':type'] === 'multi-sheet' ? json[json[':names'][0]] : json;
   if (!Array.isArray(sheet.data)) sheet.data = [];
   return sheet;
+}
+
+export function ensureSheet(json, name) {
+  if (!json[':names']) {
+    json[':names'] = [];
+    json[':type'] = 'multi-sheet';
+  }
+  if (!json[name]) json[name] = { data: [] };
+  if (!json[':names'].includes(name)) json[':names'].push(name);
+  if (!Array.isArray(json[name].data)) json[name].data = [];
+  return json[name];
 }
 
 export function getHeaders(sheet, fallback) {
@@ -39,8 +50,8 @@ export function buildMultisiteRow(slug, headers) {
   return buildRow(headers, { siteName: slug });
 }
 
-export function buildTestpermRow(slug, users, headers) {
-  return buildRow(headers, { path: testpermPath(slug), groups: users, actions: 'WRITE' });
+export function buildPermissionsRow(repo, slug, users, headers) {
+  return buildRow(headers, { path: permissionsPath(repo, slug), groups: users, actions: 'WRITE' });
 }
 
 function syncCounts(sheet) {
