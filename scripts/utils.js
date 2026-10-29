@@ -180,12 +180,44 @@ export function getInheritedPageProperties() {
 
 
 /**
+ * Path details for multi-site pages like /sites/<site>/<lang>/path/to/content.
+ * The site root (/sites/<site>/) or a missing/unsupported language folder defaults to 'en'.
+ */
+function getSitesPathDetails(pathname) {
+  const match = pathname.match(/^\/sites\/([^/]+)\/?(.*)$/);
+  if (!match) return null;
+  const [, site, rest] = match;
+  const prefix = `/sites/${site}`;
+  const [firstSegment = '', ...remaining] = rest.split('/');
+  const segmentLang = firstSegment.split('.')[0];
+  if (SUPPORTED_LANGUAGES.includes(segmentLang)) {
+    return {
+      prefix,
+      suffix: remaining.join('/'),
+      langCode: segmentLang,
+      isContentPath: false,
+      isSitesPath: true,
+    };
+  }
+  return {
+    prefix,
+    suffix: rest,
+    langCode: 'en',
+    isContentPath: false,
+    isSitesPath: true,
+  };
+}
+
+/**
  * Process current pathname and return details for use in language switching
- * Considers pathnames like /en/path/to/content and
+ * Considers pathnames like /en/path/to/content,
+ * /sites/banking/en/path/to/content and
  * /content/wknd-universal/language-masters/en/path/to/content.html for both EDS and AEM
  */
 export function getPathDetails() {
   const { pathname } = window.location;
+  const sitesDetails = getSitesPathDetails(pathname);
+  if (sitesDetails) return sitesDetails;
   const isContentPath = pathname.startsWith('/content');
   const parts = pathname.split('/');
   const safeLangGet = (index) => (parts.length > index ? parts[index] : 'en');
@@ -208,6 +240,7 @@ export function getPathDetails() {
     suffix,
     langCode,
     isContentPath,
+    isSitesPath: false,
   };
 }
 
@@ -225,6 +258,19 @@ export function getLanguage() {
   return lang;
 }
 
+/**
+ * For pages under /sites/<site>/, returns the fragment path under the site's
+ * language folder, e.g. /sites/banking/en/credit-cards -> /sites/banking/en/nav.
+ * The site root (/sites/banking/) falls back to 'en'.
+ * @param {string} name Fragment name ('nav' or 'footer')
+ * @returns {string|null} Fragment path, or null if not a /sites/ page
+ */
+export function getSitesFragmentPath(name) {
+  const { isSitesPath, prefix, langCode } = getPathDetails();
+  if (!isSitesPath) return null;
+  return `${prefix}/${langCode}/${name}`;
+}
+
 export function setPageLanguage() {
   const currentLang = getLanguage();
   document.documentElement.lang = currentLang;
@@ -237,11 +283,23 @@ export function setPageLanguage() {
 export function computeLocalizedUrl(targetLang) {
   try {
     if (!targetLang || typeof targetLang !== 'string') return window.location.href;
-    const { langCode, suffix, isContentPath } = getPathDetails();
+    const {
+      prefix, suffix, isContentPath, isSitesPath,
+    } = getPathDetails();
 
     const url = new URL(window.location.href);
     const query = url.search || '';
     const hash = url.hash || '';
+
+    if (isSitesPath) {
+      // Multi-site: /sites/{site}/{lang}/{suffix}
+      const cleanSuffix = suffix ? suffix.replace(/^\/+/, '') : '';
+      if (targetLang.toLowerCase() === 'en' && !cleanSuffix) {
+        // Homepage → site root
+        return `${prefix}/${query}${hash}`;
+      }
+      return `${prefix}/${targetLang}${cleanSuffix ? `/${cleanSuffix}` : ''}${query}${hash}`;
+    }
 
     if (!isContentPath) {
       // EDS: /{lang}/{suffix}

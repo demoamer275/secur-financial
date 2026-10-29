@@ -3,7 +3,7 @@ import { loadFragment } from '../fragment/fragment.js';
 import { isAuthorEnvironment } from '../../scripts/scripts.js';
 
 import {
-  getLanguage, getSiteName, TAG_ROOT, PATH_PREFIX, fetchLanguageNavigation,
+  getLanguage, getSiteName, TAG_ROOT, PATH_PREFIX, fetchLanguageNavigation, getSitesFragmentPath,
 } from '../../scripts/utils.js';
 
 function fireAdobeFooterBeacon() {
@@ -44,12 +44,14 @@ export default async function decorate(block) {
   const langCode = getLanguage();
   const siteName = await getSiteName();
   const isAuthor = isAuthorEnvironment();
-  let footerPath =`/${langCode}/footer`;
-
-  if(isAuthor){
-    footerPath = footerMeta
-    ? new URL(footerMeta, window.location).pathname
-    : `/content/${siteName}${PATH_PREFIX}/${langCode}/footer`;
+  let footerPath = getSitesFragmentPath('footer');
+  if (!footerPath) {
+    footerPath = `/${langCode}/footer`;
+    if (isAuthor) {
+      footerPath = footerMeta
+        ? new URL(footerMeta, window.location).pathname
+        : `/content/${siteName}${PATH_PREFIX}/${langCode}/footer`;
+    }
   }
 
   /*
