@@ -3,16 +3,17 @@
   <script src="/alloyServiceWorker.js" async></script>
 <!-- Adobe Experience Platform Launch - Secur Financial -->
   <script>
-  (function loadLaunchFromPlaceholders() {
-    const PLACEHOLDERS_URL = '/placeholders.json';
+  (function loadLaunchFromMultisite() {
+    const MULTISITE_URL = `${window.location.origin}/data/multisite.json`;
 
-    const toCamelCase = (key) => String(key || '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+(.)/g, (_, chr) => (chr ? chr.toUpperCase() : ''));
+    const getSiteName = () => {
+      const match = window.location.pathname.match(/^\/sites\/([^/]+)/);
+      return match ? decodeURIComponent(match[1]) : 'default';
+    };
 
     const appendLaunchScript = (src) => {
       if (!src) {
-        console.warn('[launch] Placeholder "launch" is missing. Launch script will not be loaded.');
+        console.warn('[launch] No scriptURL found for site. Launch script will not be loaded.');
         return;
       }
       if (document.querySelector(`head > script[src="${src}"]`)) {
@@ -34,23 +35,17 @@
       document.head.appendChild(script);
     };
 
-    const pickLaunchUrl = (placeholders) => placeholders.launch || '';
-
-    console.info('[launch] Fetching placeholders for Launch URL from:', PLACEHOLDERS_URL);
-    fetch(PLACEHOLDERS_URL, { credentials: 'same-origin' })
+    const siteName = getSiteName();
+    console.info('[launch] Fetching multisite config from:', MULTISITE_URL, 'for site:', siteName);
+    fetch(MULTISITE_URL)
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
       .then((json) => {
-        const placeholders = {};
-        (json?.data || [])
-          .filter((row) => row && row.Key)
-          .forEach((row) => {
-            placeholders[toCamelCase(row.Key)] = row.Text;
-          });
-        console.info('[launch] Placeholder "launch" value:', placeholders.launch);
-        appendLaunchScript(pickLaunchUrl(placeholders));
+        const entry = (json?.data || []).find((row) => row && row.siteName === siteName);
+        console.info('[launch] scriptURL for site', siteName, ':', entry?.scriptURL);
+        appendLaunchScript(entry?.scriptURL);
       })
       .catch((error) => {
-        console.warn('[launch] Failed to fetch placeholders. Launch script will not be loaded.', error);
+        console.warn('[launch] Failed to fetch multisite config. Launch script will not be loaded.', error);
       });
   }());
 </script>
