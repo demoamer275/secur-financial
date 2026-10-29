@@ -66,3 +66,36 @@ export function removeRows(json, predicate) {
 export function hasRow(json, predicate) {
   return getSheet(json).data.some(predicate);
 }
+
+export function siteHosts({ org, repo }) {
+  return [`main--${repo}--${org}.aem.page`, `main--${repo}--${org}.aem.live`];
+}
+
+export function mapPath(url, slug, hosts) {
+  let target = url;
+  const abs = target.match(/^https?:\/\/([^/?#]+)(.*)$/i);
+  if (abs) {
+    if (!hosts.includes(abs[1].toLowerCase())) return null;
+    target = abs[2] || '/';
+  }
+  if (!target.startsWith('/')) return null;
+  const [, path, suffix] = target.match(/^([^?#]*)(.*)$/);
+  if (path === '/' || path === '/index') return `/sites/${slug}/${suffix}`;
+  if (path === '/en' || path.startsWith('/en/')) return `/sites/${slug}${path}${suffix}`;
+  return null;
+}
+
+const META_KEYS = ['nav', 'footer'];
+
+export function rewriteLinks(html, slug, hosts) {
+  const withHrefs = html.replace(/(\shref=")([^"]*)(")/gi, (m, pre, url, post) => {
+    const mapped = mapPath(url, slug, hosts);
+    return mapped ? `${pre}${mapped}${post}` : m;
+  });
+  const metaRow = /(<div>\s*(?:<p>)?\s*)([A-Za-z]+)(\s*(?:<\/p>)?\s*<\/div>\s*<div>\s*(?:<p>)?\s*)([^<\s]+)/g;
+  return withHrefs.replace(metaRow, (m, a, key, b, value) => {
+    if (!META_KEYS.includes(key.toLowerCase())) return m;
+    const mapped = mapPath(value, slug, hosts);
+    return mapped ? `${a}${key}${b}${mapped}` : m;
+  });
+}

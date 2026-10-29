@@ -32,7 +32,11 @@ Users: comma-separated list, line breaks removed, stored as a single string.
    - `groups` = users string
    - `actions` = `WRITE`
    - 4th column blank
-4. Preview copied pages and `/data/multisite` (testperm is not previewed).
+4. Rewrite links in every copied page (data sheets are ignored), saving only pages that change:
+   - `href`s and `nav`/`footer` metadata values pointing to `/en/...` → `/sites/<slug>/en/...`; `/` or `/index` → `/sites/<slug>/`.
+   - Same applies to absolute `https://main--{repo}--{org}.aem.page|aem.live/...` links (made site-relative).
+   - Other links (external, `/data/...`, `/drafts/...`, already `/sites/...`, media) and body text are untouched.
+5. Preview copied pages and `/data/multisite` (testperm is not previewed).
 
 **Delete**: un-preview pages, remove the multisite row and the testperm row whose `path` is exactly `/sites/<slug>/ + **`, re-preview multisite, delete `/sites/<slug>`.
 

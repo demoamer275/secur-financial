@@ -36,6 +36,17 @@ export async function writeSheet(ctx, path, json) {
   await request(ctx, 'PUT', `${DA}/source/${ctx.org}/${ctx.repo}${path}.json`, { body });
 }
 
+export async function readSource(ctx, path) {
+  const resp = await request(ctx, 'GET', `${DA}/source/${ctx.org}/${ctx.repo}${path}`);
+  return resp.text();
+}
+
+export async function writeSource(ctx, path, html) {
+  const body = new FormData();
+  body.append('data', new Blob([html], { type: 'text/html' }));
+  await request(ctx, 'PUT', `${DA}/source/${ctx.org}/${ctx.repo}${path}`, { body });
+}
+
 export async function deleteSource(ctx, path) {
   await request(ctx, 'DELETE', `${DA}/source/${ctx.org}/${ctx.repo}${path}`);
 }

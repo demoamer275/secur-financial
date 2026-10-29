@@ -7,11 +7,13 @@ const ctx = { org: 'o', repo: 'r', token: 't' };
 let calls;
 let sheets;
 let sitesList;
+let pages;
 
 const json = (b) => new Response(JSON.stringify(b), { status: 200 });
 
 beforeEach(() => {
   calls = [];
+  pages = {};
   sitesList = [{ name: 'other', path: '/o/r/sites/other' }];
   sheets = {
     multisite: { ':type': 'sheet', total: 1, data: [{ siteName: 'other', title: 'T' }] },
@@ -40,8 +42,25 @@ beforeEach(() => {
     if (url.endsWith('/list/o/r/sites/my-bank/en')) {
       return json([{ name: 'a', ext: 'html', path: '/o/r/sites/my-bank/en/a.html' }]);
     }
+    const page = url.match(/source\/o\/r(\/sites\/my-bank\/.+\.html)$/);
+    if (page && method === 'GET') return new Response(pages[page[1]] ?? '', { status: 200 });
+    if (page && method === 'PUT') {
+      pages[page[1]] = await opts.body.get('data').text();
+      return json({});
+    }
     return json({});
   };
+});
+
+test('createSite rewrites copied page links before preview, skips unchanged', async () => {
+  pages['/sites/my-bank/index.html'] = '<a href="/en/a">A</a>';
+  pages['/sites/my-bank/en/a.html'] = '<a href="https://x.com">X</a>';
+  await createSite(ctx, 'My Bank', 'a', () => {});
+  assert.equal(pages['/sites/my-bank/index.html'], '<a href="/sites/my-bank/en/a">A</a>');
+  const put = calls.indexOf('PUT https://admin.da.live/source/o/r/sites/my-bank/index.html');
+  assert.ok(put > -1);
+  assert.ok(put < calls.indexOf('POST https://admin.hlx.page/preview/o/r/main/sites/my-bank/'));
+  assert.ok(!calls.includes('PUT https://admin.da.live/source/o/r/sites/my-bank/en/a.html'));
 });
 
 test('createSite writes rows, copies, previews (not testperm)', async () => {

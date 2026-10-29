@@ -11,9 +11,12 @@ import {
   hasRow,
   MULTISITE_DEFAULT_HEADERS,
   TESTPERM_DEFAULT_HEADERS,
+  siteHosts,
+  rewriteLinks,
 } from './utils.js';
 import {
   listFolder, copy, readSheet, writeSheet, deleteSource, crawlPages, preview, unpreview,
+  readSource, writeSource,
 } from './api.js';
 
 const MULTISITE = '/data/multisite';
@@ -46,6 +49,15 @@ async function createSteps(ctx, slug, users, multisite, log) {
   await writeSheet(ctx, TESTPERM, testperm);
 
   const pages = await crawlPages(ctx, `/sites/${slug}`);
+  const hosts = siteHosts(ctx);
+  await sequence(pages, async (page) => {
+    const file = `${page}.html`;
+    const html = await readSource(ctx, file);
+    const updated = rewriteLinks(html, slug, hosts);
+    if (updated === html) return;
+    log(`Updating links in ${page}`);
+    await writeSource(ctx, file, updated);
+  });
   await sequence(pages, (page) => {
     log(`Previewing ${page}`);
     return preview(ctx, page);

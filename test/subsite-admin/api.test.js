@@ -3,6 +3,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   listFolder, copy, readSheet, writeSheet, deleteSource, crawlPages, preview, unpreview,
+  readSource, writeSource,
 } from '../../tools/subsite-admin/api.js';
 
 const ctx = { org: 'o', repo: 'r', token: 't' };
@@ -61,6 +62,18 @@ test('writeSheet PUTs data blob', async () => {
   assert.equal(calls[0].opts.headers.Authorization, 'Bearer t');
   const blob = calls[0].opts.body.get('data');
   assert.deepEqual(JSON.parse(await blob.text()), body);
+});
+
+test('readSource/writeSource', async () => {
+  responder = () => new Response('<p>x</p>', { status: 200 });
+  assert.equal(await readSource(ctx, '/sites/x/en/a.html'), '<p>x</p>');
+  assert.equal(calls[0].url, 'https://admin.da.live/source/o/r/sites/x/en/a.html');
+  assert.equal(calls[0].opts.headers.Authorization, 'Bearer t');
+  await writeSource(ctx, '/sites/x/en/a.html', '<p>y</p>');
+  assert.equal(calls[1].opts.method, 'PUT');
+  const blob = calls[1].opts.body.get('data');
+  assert.equal(blob.type, 'text/html');
+  assert.equal(await blob.text(), '<p>y</p>');
 });
 
 test('deleteSource DELETEs', async () => {

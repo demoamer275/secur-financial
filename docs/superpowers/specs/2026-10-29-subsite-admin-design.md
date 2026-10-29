@@ -108,6 +108,22 @@ Add to site config `apps` tab:
 |---|---|---|---|---|
 | SubSite Admin | Create and delete subsites | | `/app/{org}/{repo}/tools/subsite-admin/subsite-admin?ref=local` | local |
 
+## Link rewriting (create flow, after copy, before preview)
+
+For every `.html` page under `/sites/<slug>` (from `crawlPages`): `GET /source/...html`, apply `rewriteLinks(html, slug, hosts)`, `PUT` back (multipart `data`, `text/html`) only if changed. Data sheets (`.json`) are ignored.
+
+`hosts` = `main--{repo}--{org}.aem.page`, `main--{repo}--{org}.aem.live` (case-insensitive). No production domain.
+
+`mapPath(url)` for a link target:
+- Absolute URL on one of `hosts` → use its path (result is site-relative); other absolute URLs, `mailto:`, `tel:`, `#…` → unchanged.
+- Path already under `/sites/` → unchanged (idempotent).
+- `/` or `/index` → `/sites/<slug>/`.
+- `/en` or `/en/...` → `/sites/<slug>` + path.
+- Anything else (e.g. `/data/...`, `/drafts/...`) → unchanged.
+- `?query` / `#hash` suffix preserved.
+
+Applied to: every `href="..."` attribute, and the value cell of `nav` / `footer` rows in the metadata block. Plain body text is never changed.
+
 ## Out of scope
 
 - Rollback of partial operations.
